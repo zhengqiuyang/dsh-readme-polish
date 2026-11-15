@@ -10,7 +10,7 @@
 
 **If this helps you, please give it a star** — it helps others find it.
 
-[Install](#install) · [What it does](#what) · [How it works](#how) · [Verification](#verification) · [Structure](#structure)
+[Install](#install) · [Why a plugin](#why) · [What it does](#what) · [Verification](#verification) · [Structure](#structure)
 
 <a id="install"></a>
 
@@ -24,6 +24,12 @@ Or in the Web UI: **Plugins** → **Add plugin** → `dsh-readme-polish`.
 
 From a local checkout: `dsh plugin add ./dsh-readme-polish`. Published on npm as [`dsh-readme-polish`](https://www.npmjs.com/package/dsh-readme-polish).
 
+<a id="why"></a>
+
+## Why a plugin
+
+The skill alone only needs a directory under `~/.agents/skills/`. The plugin buys the profile-level lifecycle: one install command, the skill appears in the Plugins inventory with its own entry and detail page, updates go through the plugin manager, and it is removed cleanly with the bundle.
+
 <a id="what"></a>
 
 ## What it does
@@ -35,15 +41,23 @@ The bundled `readme-polish` skill upgrades an **existing** README to the standar
 3. **Rewrite** — one-line value proposition, explicit anchors, comparison tables where they beat prose, bilingual structure where needed.
 4. **Deterministic gate** — `scripts/check_readme.py` checks dead local links, broken images, Chinese anchor drift, mermaid node count, table width, badge count, and whether an install command is above the fold.
 
-Ask in natural language: *"把我的 README 打磨一下"*, *"this README looks plain"*, *"add badges/mermaid/callouts"*.
+## Usage
 
-<a id="how"></a>
+Ask in natural language; there is no slash command:
+
+```text
+把我的 README 打磨一下
+this README looks plain, compare it with popular repos
+add badges / mermaid / callouts to the README
+```
+
+When the content is already good the correct output is small — the skill is calibrated to say so rather than pad the page.
+
+<a id="verification"></a>
 
 ## How it works
 
-`index.js` registers a skill provider with `ctx.skills.registerProvider`. At catalog time the provider reads `skills/readme-polish/SKILL.md` from the package and returns it as a bundled candidate whose resource base is the skill directory, so `references/` and `scripts/` resolve.
-
-<a id="verification"></a>
+`index.js` registers a skill provider with `ctx.skills.registerProvider`. At catalog time the provider reads `skills/readme-polish/SKILL.md` from the package and returns it as a bundled candidate whose resource base is the skill directory, so `references/` and `scripts/` resolve. No network calls, no dependencies, no model calls of its own.
 
 ## Verification
 
