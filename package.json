@@ -1,6 +1,6 @@
 {
   "name": "dsh-readme-polish",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "DeepSeek Harness plugin that bundles the readme-polish skill: upgrade an existing README to the standard of top repos in its own ecosystem.",
   "type": "module",
   "main": "index.js",
