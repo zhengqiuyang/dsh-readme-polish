@@ -1,2 +1,75 @@
 # dsh-readme-polish
-DeepSeek Harness plugin that bundles the readme-polish skill: upgrade an existing README to the standard of top repos in its own ecosystem
+
+[![npm](https://img.shields.io/npm/v/dsh-readme-polish)](https://www.npmjs.com/package/dsh-readme-polish)
+[![license](https://img.shields.io/npm/l/dsh-readme-polish)](LICENSE)
+[![GitHub stars](https://img.shields.io/github/stars/zhengqiuyang/dsh-readme-polish?style=flat)](https://github.com/zhengqiuyang/dsh-readme-polish/stargazers)
+
+> A [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) plugin that puts the `readme-polish` skill into your profile's skill catalog — install once, every agent in that profile can use it.
+
+> 把 `readme-polish` 技能打包进 DeepSeek Harness：装一次，profile 里所有 agent 都能用。把已有 README 升级到同生态头部仓库的水准。
+
+**If this helps you, please give it a star** — it helps others find it.
+
+[Install](#install) · [What it does](#what) · [How it works](#how) · [Verification](#verification) · [Structure](#structure)
+
+<a id="install"></a>
+
+## Install
+
+```bash
+dsh plugin add dsh-readme-polish
+```
+
+Or in the Web UI: **Plugins** → **Add plugin** → `dsh-readme-polish`.
+
+From a local checkout: `dsh plugin add ./dsh-readme-polish`. Published on npm as [`dsh-readme-polish`](https://www.npmjs.com/package/dsh-readme-polish).
+
+<a id="what"></a>
+
+## What it does
+
+The bundled `readme-polish` skill upgrades an **existing** README to the standard of the top repositories in its own ecosystem:
+
+1. **Ecosystem calibration** — samples two or three head repositories in the same category and picks an archetype: minimal typographic or full-component.
+2. **Component selection** — a decision table for badges, mermaid, callouts, `<details>`, heroes and banners, with the condition under which each earns its place.
+3. **Rewrite** — one-line value proposition, explicit anchors, comparison tables where they beat prose, bilingual structure where needed.
+4. **Deterministic gate** — `scripts/check_readme.py` checks dead local links, broken images, Chinese anchor drift, mermaid node count, table width, badge count, and whether an install command is above the fold.
+
+Ask in natural language: *"把我的 README 打磨一下"*, *"this README looks plain"*, *"add badges/mermaid/callouts"*.
+
+<a id="how"></a>
+
+## How it works
+
+`index.js` registers a skill provider with `ctx.skills.registerProvider`. At catalog time the provider reads `skills/readme-polish/SKILL.md` from the package and returns it as a bundled candidate whose resource base is the skill directory, so `references/` and `scripts/` resolve.
+
+<a id="verification"></a>
+
+## Verification
+
+- **Provider logic** — `npm test` registers the provider against a stub context, asserts the candidate metadata and loads the skill body.
+- **Install** — installed into a DSH profile as bundle `dsh-readme-polish` 0.1.0; the installer reported `application: applied` with no warnings.
+- **Skill catalog** — verify in a new session: a running session builds its catalog at start, so the plugin's skill appears only after reopening.
+
+<a id="structure"></a>
+
+## Structure
+
+```
+package.json          # manifest + dsh.bundle.patch
+cordis.patch.yml      # inserts the plugin row into the profile
+index.js              # skill provider
+locale/{en,zh}.json   # Plugins title / description / detail
+icon.svg
+docs/DETAIL.md
+skills/readme-polish/ # bundled skill (SKILL.md, references, scripts)
+test/provider.test.mjs
+```
+
+## Source
+
+The skill lives in its own repository, [zhengqiuyang/readme-polish](https://github.com/zhengqiuyang/readme-polish), and is copied into `skills/readme-polish/` here so the package is self-contained.
+
+## License
+
+MIT

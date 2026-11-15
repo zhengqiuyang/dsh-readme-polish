@@ -1,0 +1,49 @@
+{
+  "name": "dsh-readme-polish",
+  "version": "0.1.0",
+  "description": "DeepSeek Harness plugin that bundles the readme-polish skill: upgrade an existing README to the standard of top repos in its own ecosystem.",
+  "type": "module",
+  "main": "index.js",
+  "exports": {
+    ".": "./index.js",
+    "./locale/*.json": "./locale/*.json",
+    "./icon": "./icon.svg"
+  },
+  "files": [
+    "index.js",
+    "cordis.patch.yml",
+    "locale/*.json",
+    "docs",
+    "icon.svg",
+    "skills",
+    "README.md",
+    "LICENSE"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "scripts": {
+    "test": "node test/provider.test.mjs"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/zhengqiuyang/dsh-readme-polish.git"
+  },
+  "homepage": "https://github.com/zhengqiuyang/dsh-readme-polish",
+  "bugs": {
+    "url": "https://github.com/zhengqiuyang/dsh-readme-polish/issues"
+  },
+  "keywords": [
+    "dsh-plugin",
+    "deepseek-harness",
+    "agent-skills",
+    "readme"
+  ],
+  "author": "zhengqiuyang",
+  "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  }
+}
