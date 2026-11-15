@@ -8,7 +8,6 @@
 
 把 `readme-polish` 技能打包进 DeepSeek Harness：装一次，profile 里所有 agent 都能用。把已有 README 升级到同生态头部仓库的水准。
 
-[![npm](https://img.shields.io/npm/v/dsh-readme-polish?style=flat-square)](https://www.npmjs.com/package/dsh-readme-polish)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square)](LICENSE)
 [![Stars](https://img.shields.io/github/stars/zhengqiuyang/dsh-readme-polish?style=flat-square&color=0969da)](https://github.com/zhengqiuyang/dsh-readme-polish/stargazers)
 
