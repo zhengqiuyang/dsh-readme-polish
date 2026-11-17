@@ -1,9 +1,0 @@
-chore: sync readme-polish skill with the merged upstream fixes
-
-Pull in the version merged in alirezarezvani/claude-skills (#1145): shortened
-SKILL.md, the component/checklist/archetypes references, and the gate fixes for
-duplicate heading slugs, emoji anchors, todo substrings, /badge URLs and exit
-codes. Drop the superseded case-study/competitors references.
-
-Also teach the gate that `dsh plugin add` is an install command, so this
-plugin's README passes its own R009 check, and bump the package to 0.1.2.
