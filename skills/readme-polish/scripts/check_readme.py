@@ -18,8 +18,9 @@ Rules
   R008  badge overload             more shields.io badges than the configured max
   R009  install below fold         no install command in the first N lines (warn)
 
-Exit codes: 0 = clean (warnings allowed), 1 = errors found, 2 = usage/IO error.
-Use --strict to fail on warnings too; --json for CI consumption.
+Exit codes: 0 = clean, 1 = warnings only, 2 = errors (or warnings under
+--strict), 3 = a file is missing or unreadable. Bad flags exit 2 via argparse,
+with a usage message on stderr and no findings. --json for CI consumption.
 
 Examples
   python scripts/check_readme.py README.md
@@ -31,6 +32,7 @@ import argparse
 import json
 import re
 import sys
+import tempfile
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Iterable
@@ -58,11 +60,11 @@ NODE_DEF_RE = re.compile(
 INSTALL_RE = re.compile(
     r"\b(npx|npm\s+(?:i|install)|pnpm\s+add|yarn\s+add|pip\s+install|"
     r"uv\s+(?:run|pip|tool)|git\s+clone|cargo\s+install|go\s+install|"
-    r"composer\s+require|brew\s+install)\b",
+    r"composer\s+require|brew\s+install|dsh\s+plugin\s+add)\b",
     re.I,
 )
 PLACEHOLDER_RE = re.compile(
-    r"(placeholder|todo|tbd|coming\s+soon|待补|占位|示例截图|假图)", re.I
+    r"(\b(?:placeholder|todo|tbd|coming\s+soon)\b|待补|占位|示例截图|假图)", re.I
 )
 INLINE_CODE_RE = re.compile(r"`+[^`]*`+")
 GITHUB_PAGE_IMG_RE = re.compile(r"github\.com/[^)\s\"']+/(?:blob|tree)/", re.I)
@@ -92,7 +94,8 @@ def slugify(text: str) -> str:
     text = re.sub(r"<[^>]+>", "", text)
     text = text.strip().lower()
     text = re.sub(r"[^\w\s-]", "", text, flags=re.UNICODE)
-    return re.sub(r"\s+", "-", text).strip("-")
+    # GitHub keeps a leading hyphen left by a stripped emoji: "🚀 Install" -> "-install".
+    return re.sub(r"\s", "-", text)
 
 
 def has_non_ascii(text: str) -> bool:
@@ -120,7 +123,8 @@ def suspicious_image_url(url: str) -> str | None:
         return "shields.io URL still contains a placeholder owner/repo"
     if GITHUB_PAGE_IMG_RE.search(url):
         return "image src points at a GitHub blob/tree HTML page (broken image)"
-    if "github.com" in url and not IMAGE_EXT_RE.search(url.split("?", 1)[0]):
+    bare = url.split("?", 1)[0].rstrip("/")
+    if "github.com" in url and not IMAGE_EXT_RE.search(bare) and not bare.endswith("/badge"):
         return "image src points at a GitHub HTML page, not an image file"
     if url.lower().endswith(".html") or url.lower().endswith(".htm"):
         return "image src points at an HTML page"
@@ -149,6 +153,7 @@ def scan_file(path: Path, cfg: Config) -> list[Finding]:
     mermaid_lines: list[str] = []
     explicit_ids: set[str] = set()
     heading_slugs: set[str] = set()
+    slug_counts: dict[str, int] = {}
 
     for lineno, line in enumerate(lines, 1):
         match = FENCE_RE.match(line)
@@ -176,10 +181,18 @@ def scan_file(path: Path, cfg: Config) -> list[Finding]:
             explicit_ids.add(found)
         heading = HEADING_RE.match(line)
         if heading:
-            heading_slugs.add(slugify(heading.group(1)))
+            # GitHub suffixes repeated slugs: usage, usage-1, usage-2 ...
+            base = slugify(heading.group(1))
+            seen = slug_counts.get(base, 0)
+            slug_counts[base] = seen + 1
+            heading_slugs.add(base if seen == 0 else f"{base}-{seen}")
 
     # Pass 2: line-level checks outside fenced code.
-    badge_count = len(re.findall(r"img\.shields\.io", text, re.I))
+    badge_count = sum(
+        len(re.findall(r"img\.shields\.io", strip_inline_code(line), re.I))
+        for lineno, line in enumerate(lines, 1)
+        if lineno not in code_lines
+    )
     seen_images: set[tuple[int, str]] = set()
     # Install commands usually live inside fenced code, so scan raw lines.
     install_visible = any(
@@ -265,7 +278,8 @@ def scan_file(path: Path, cfg: Config) -> list[Finding]:
 
 
 def _check_image(add, lineno: int, alt: str, url: str, readme: Path) -> None:
-    if PLACEHOLDER_RE.search(alt) or PLACEHOLDER_RE.search(url):
+    filename = url.split("?", 1)[0].split("#", 1)[0].rstrip("/").rsplit("/", 1)[-1]
+    if PLACEHOLDER_RE.search(alt) or PLACEHOLDER_RE.search(filename):
         add(
             "R003",
             "error",
@@ -350,10 +364,15 @@ def main(argv: Iterable[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         description="Deterministic README gate for the readme-polish skill."
     )
-    parser.add_argument("files", nargs="+", type=Path, help="README files to check")
+    parser.add_argument("files", nargs="*", type=Path, help="README files to check")
     parser.add_argument("--json", action="store_true", help="machine-readable output")
     parser.add_argument(
-        "--strict", action="store_true", help="treat warnings as failures"
+        "--sample",
+        action="store_true",
+        help="run the embedded sample README (CI JSON-output gate)",
+    )
+    parser.add_argument(
+        "--strict", action="store_true", help="treat warnings as errors (exit 2)"
     )
     parser.add_argument("--max-mermaid-nodes", type=int, default=7)
     parser.add_argument("--max-table-cols", type=int, default=5)
@@ -367,21 +386,43 @@ def main(argv: Iterable[str] | None = None) -> int:
         max_badges=args.max_badges,
         first_screen_lines=args.first_screen_lines,
     )
+    files = list(args.files)
+    sample_dir: tempfile.TemporaryDirectory[str] | None = None
+    if args.sample:
+        sample_dir = tempfile.TemporaryDirectory()
+        sample = Path(sample_dir.name) / "README.md"
+        sample.write_text(
+            "# Sample Project\n\n"
+            "![License](https://img.shields.io/badge/license-MIT-blue)\n\n"
+            "## Install\n\n"
+            "```bash\npip install sample-project\n```\n",
+            encoding="utf-8",
+        )
+        files.append(sample)
+    if not files:
+        parser.error("provide at least one README file, or --sample")
+
     findings: list[Finding] = []
-    for path in args.files:
+    for path in files:
         if not path.is_file():
             print(f"error: not a file: {path}", file=sys.stderr)
-            return 2
+            return 3
         try:
             findings.extend(scan_file(path, cfg))
         except RuntimeError as exc:
             print(f"error: {exc}", file=sys.stderr)
-            return 2
+            return 3
+
+    if sample_dir is not None:
+        sample_dir.cleanup()
 
     emit(findings, args.json)
     errors = sum(f.severity == "error" for f in findings)
     warnings = sum(f.severity == "warning" for f in findings)
+    # 0 = clean, 1 = warnings, 2 = errors (or warnings in --strict mode).
     if errors or (args.strict and warnings):
+        return 2
+    if warnings:
         return 1
     return 0
 

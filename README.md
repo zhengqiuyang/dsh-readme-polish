@@ -63,7 +63,7 @@ When the content is already good the correct output is small — the skill is ca
 ## Verification / 验证
 
 - **Provider logic** — `npm test` registers the provider against a stub context, asserts the candidate metadata and loads the skill body.
-- **Install** — installed into a DSH profile as bundle `dsh-readme-polish` 0.1.1; the installer reported `application: applied` with no warnings.
+- **Install** — installed into a DSH profile as bundle `dsh-readme-polish` 0.1.2; the installer reported `application: applied` with no warnings.
 - **Skill catalog** — verify in a new session: a running session builds its catalog at start, so the plugin's skill appears only after reopening.
 
 <a id="structure"></a>
